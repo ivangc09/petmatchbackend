@@ -90,5 +90,12 @@ class ListarSolicitudesAdopcionView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return AdoptionRequest.objects.filter(mascota__responsable=self.request.user).order_by('-fecha_solicitud')
+        user = self.request.user
+        queryset = AdoptionRequest.objects.filter(mascota__responsable=user).order_by('-fecha_solicitud')
+        mascota_id = self.request.query_params.get('mascota')
+
+        if mascota_id:
+            queryset = queryset.filter(mascota_id=mascota_id)
+            
+        return queryset
     

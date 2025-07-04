@@ -8,5 +8,5 @@ urlpatterns = [
     path('comentarios/crear/', CrearComentarioView.as_view(), name='crear_comentario'),
     path('comentarios/<int:mascota_id>/', ListarComentariosView.as_view(), name='listar_comentarios'),
     path('solicitudes/upload/', UploadFormularioView.as_view(), name='upload_formulario'),
-    path('mis-solicitudes/', ListarSolicitudesAdopcionView.as_view(), name='listar_solicitudes_adopcion'),
+    path('solicitudes/mis-solicitudes/', ListarSolicitudesAdopcionView.as_view(), name='listar_solicitudes_adopcion'),
 ]

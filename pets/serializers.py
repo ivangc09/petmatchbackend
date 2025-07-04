@@ -21,5 +21,5 @@ class AdoptionRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AdoptionRequest
-        fields = ['id', 'mascota', 'mascota_nombre', 'adoptante', 'nombre_adoptante', 'url_documento', 'fecha_solicitud']
+        fields = ['id', 'mascota', 'mascota_nombre', 'adoptante', 'nombre_adoptante', 'url_formulario', 'fecha_solicitud']
         read_only_fields = ['url_documento','fecha_solicitud']
