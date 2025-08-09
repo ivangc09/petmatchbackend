@@ -99,3 +99,7 @@ class ListarSolicitudesAdopcionView(generics.ListAPIView):
             
         return queryset
     
+class MostrarMascotaView(generics.RetrieveAPIView):
+    queryset = Pet.objects.all()
+    serializer_class = PetSerializer
+    permission_classes = [permissions.AllowAny]

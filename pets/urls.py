@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import CrearMascotaView, ListarMascotasView, ListarTodasMascotasView, CrearComentarioView, ListarComentariosView, UploadFormularioView, ListarSolicitudesAdopcionView
+from .views import CrearMascotaView, ListarMascotasView, ListarTodasMascotasView, CrearComentarioView, ListarComentariosView, UploadFormularioView, ListarSolicitudesAdopcionView,MostrarMascotaView
 
 urlpatterns = [
     path('crear/', CrearMascotaView.as_view(), name='crear_mascota'),
@@ -9,4 +9,5 @@ urlpatterns = [
     path('comentarios/<int:mascota_id>/', ListarComentariosView.as_view(), name='listar_comentarios'),
     path('solicitudes/upload/', UploadFormularioView.as_view(), name='upload_formulario'),
     path('solicitudes/mis-solicitudes/', ListarSolicitudesAdopcionView.as_view(), name='listar_solicitudes_adopcion'),
+    path('detalles/<int:pk>/', MostrarMascotaView.as_view(), name='mostrar_mascota'),
 ]
