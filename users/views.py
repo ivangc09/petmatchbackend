@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from dj_rest_auth.registration.views import RegisterView
 from .serializers import CustomRegisterSerializer, ProfileSerializer
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 User = get_user_model()
 
@@ -35,6 +36,17 @@ class CustomLoginView(APIView):
 class PerfilUsuarioView(generics.RetrieveUpdateAPIView):
         serializer_class = ProfileSerializer
         permission_classes = [permissions.IsAuthenticated]
+        parser_classes = (MultiPartParser, FormParser, JSONParser)
 
         def get_object(self):
             return self.request.user
+        
+        def update(self, request, *args, **kwargs):
+            partial = request.method.lower() == 'patch'
+            instance = self.get_object()
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            serializer.is_valid(raise_exception=True)
+            instance = serializer.save()
+            
+            instance.refresh_from_db()
+            return Response(self.get_serializer(instance).data)

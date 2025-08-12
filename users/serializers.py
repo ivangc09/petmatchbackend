@@ -19,12 +19,14 @@ class CustomRegisterSerializer(RegisterSerializer):
         user = super().save(request)
         user.tipo_usuario = self.validated_data.get('tipo_usuario', 'adoptante')
         user.save()
-        print("💾 Usuario guardado con tipo_usuario:", user.tipo_usuario)
+
         return user
     
 class ProfileSerializer(serializers.ModelSerializer):
+    foto_perfil = serializers.ImageField(required=False)
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'tipo_usuario']
+        fields = ['id', 'username', 'email', 'tipo_usuario','ciudad', 'telefono', 'foto_perfil',
+            'mascotas_adoptadas', 'mascotas_publicadas',]
         read_only_fields = ['id', 'email', 'tipo_usuario']
 
