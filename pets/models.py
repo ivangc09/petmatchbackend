@@ -34,5 +34,33 @@ class Coment(models.Model):
 class AdoptionRequest(models.Model):
     mascota = models.ForeignKey(Pet, on_delete=models.CASCADE)
     adoptante = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='solicitudes')
-    url_formulario = models.URLField()
     fecha_solicitud = models.DateTimeField(auto_now_add=True)
+
+    # DATOS DEL FORMULARIO DE ADOPCION
+
+    nombre = models.CharField(max_length=255,default="")
+    edad = models.PositiveIntegerField(default=18)
+    ocupacion = models.CharField(max_length=255,blank=True, default="")
+    estado_civil = models.CharField(max_length=50,blank=True, default="")
+    direccion = models.TextField(default="")
+    telefono = models.CharField(max_length=20,default="")
+    email = models.EmailField(default="")
+
+    vivienda = models.CharField(max_length=50,default="")
+    protegida = models.BooleanField(default=False)
+    es_propia = models.BooleanField(default=False)
+    renta_permite = models.BooleanField(null=True,  blank=True)
+    horas_solo = models.CharField(max_length=20,default="")
+    ejercicio = models.CharField(max_length=20,default="")
+
+    tuvo_mascotas = models.BooleanField(null=True, blank=True)
+    mascotas_actuales = models.TextField(blank=True, default="")
+    motivo = models.TextField(default="")
+
+    responsable = models.CharField(max_length=255,default="")
+    familia_de_acuerdo = models.BooleanField(default=True)
+    compromiso_vida = models.BooleanField(default=True)
+
+    # Documentos
+    id_oficial = models.FileField(storage=NoHeadObjectS3Boto3Storage(),upload_to="documentos/adopciones/ids/", blank=True, null=True)
+    comprobante_domicilio = models.FileField(storage=NoHeadObjectS3Boto3Storage(),upload_to="documentos/adopciones/comprobantes/", blank=True, null=True)
