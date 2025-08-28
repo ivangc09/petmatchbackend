@@ -30,7 +30,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 
 # Application definition
@@ -59,6 +59,8 @@ INSTALLED_APPS = [
 
     'users',
     'pets',
+    'chat',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -94,6 +96,9 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'petmatchbackend.wsgi.application'
+ASGI_APPLICATION = 'petmatchbackend.asgi.application'
+
+REDIS_URL = "redis://127.0.0.1:6379/0"
 
 
 # Database
@@ -188,6 +193,15 @@ AUTH_USER_MODEL = 'users.CustomUser'
 
 REST_AUTH_REGISTER_SERIALIZERS = {
     'REGISTER_SERIALIZER': 'users.serializers.CustomRegisterSerializer',
+}
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [REDIS_URL],
+        },
+    }
 }
 
 

@@ -29,4 +29,5 @@ urlpatterns = [
     path('api/auth/social/', include('allauth.socialaccount.urls')),
     path('api/auth/', include('users.urls')),
     path('api/mascotas/', include('pets.urls')),
+    path('api/chat/', include('chat.urls')),
 ]
