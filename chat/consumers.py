@@ -21,7 +21,7 @@ class DMConsumer(AsyncJsonWebsocketConsumer):
         # Sala compartida (IDs ordenados)
         self.room_name = make_room(user.id, self.peer_id)
 
-        # Logs útiles para depurar
+        # Logs
         print(f"[WS CONNECT] pid={os.getpid()} user={user.id} peer={self.peer_id} room={self.room_name}")
 
         await self.channel_layer.group_add(self.room_name, self.channel_name)

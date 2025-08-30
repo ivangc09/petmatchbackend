@@ -23,7 +23,7 @@ class ListarMascotasView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Pet.objects.filter(responsable=self.request.user)
+        return Pet.objects.filter(responsable=self.request.user, activo=True)
     
 class ListarTodasMascotasView(generics.ListAPIView):
     serializer_class = PetSerializer
@@ -185,3 +185,12 @@ class MostrarMascotaView(generics.RetrieveAPIView):
     queryset = Pet.objects.all()
     serializer_class = PetSerializer
     permission_classes = [permissions.AllowAny]
+
+class EliminarMascotaView(generics.DestroyAPIView):
+    queryset = Pet.objects.all()
+    serializer_class = PetSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_destroy(self, instance):
+        instance.activo = False
+        instance.save()
