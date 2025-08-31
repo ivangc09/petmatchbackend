@@ -7,6 +7,19 @@ class PetSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['responsable']
 
+class UpdatePetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Pet
+        fields = ['nombre', 'fotos', 'especie', 'raza', 'edad', 'tamaño', 'sexo', 'descripcion', 'estado', 'activo']
+        read_only_fields = ['responsable', 'activo']
+
+    def validate(self, attrs):
+        if "edad" in attrs and attrs["edad"] < 0:
+            raise serializers.ValidationError({"edad": "La edad no puede ser negativa."})
+        elif "edad" in attrs and attrs["edad"] > 20:
+            raise serializers.ValidationError({"edad": "Escribe una edad mas realista."})
+        return attrs
+
 class ComentSerializer(serializers.ModelSerializer):
     autor_username = serializers.ReadOnlyField(source='autor.username')
     

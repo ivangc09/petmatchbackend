@@ -1,8 +1,8 @@
 from .models import Pet, Coment, AdoptionRequest
-from .serializers import PetSerializer, ComentSerializer, AdoptionRequestSerializer
+from .serializers import PetSerializer, ComentSerializer, AdoptionRequestSerializer, UpdatePetSerializer
 
 from django.conf import settings
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, parsers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -186,6 +186,8 @@ class MostrarMascotaView(generics.RetrieveAPIView):
     serializer_class = PetSerializer
     permission_classes = [permissions.AllowAny]
 
+    
+
 class EliminarMascotaView(generics.DestroyAPIView):
     queryset = Pet.objects.all()
     serializer_class = PetSerializer
@@ -194,3 +196,11 @@ class EliminarMascotaView(generics.DestroyAPIView):
     def perform_destroy(self, instance):
         instance.activo = False
         instance.save()
+
+class ActualizarMascotaView(generics.RetrieveUpdateAPIView):
+    serializer_class = UpdatePetSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [parsers.JSONParser, parsers.FormParser, parsers.MultiPartParser]
+
+    def get_queryset(self):
+        return Pet.objects.filter(activo=True, responsable=self.request.user)
