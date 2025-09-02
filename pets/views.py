@@ -1,11 +1,13 @@
 from .models import Pet, Coment, AdoptionRequest
-from .serializers import PetSerializer, ComentSerializer, AdoptionRequestSerializer, UpdatePetSerializer
+from .serializers import PetSerializer, ComentSerializer, AdoptionRequestListSerializer, UpdatePetSerializer
 
 from django.conf import settings
 from rest_framework import generics, permissions, status, parsers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.pagination import PageNumberPagination
+from django.db.models import Q
 
 import json
 import boto3, uuid
@@ -52,7 +54,31 @@ class ListarComentariosView(generics.ListAPIView):
         mascota_id = self.kwargs['mascota_id']
         return Coment.objects.filter(mascota_id=mascota_id).order_by('-fecha_creacion')
     
+    
+class MostrarMascotaView(generics.RetrieveAPIView):
+    queryset = Pet.objects.all()
+    serializer_class = PetSerializer
+    permission_classes = [permissions.AllowAny]
 
+class EliminarMascotaView(generics.DestroyAPIView):
+    queryset = Pet.objects.all()
+    serializer_class = PetSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_destroy(self, instance):
+        instance.activo = False
+        instance.save()
+
+class ActualizarMascotaView(generics.RetrieveUpdateAPIView):
+    serializer_class = UpdatePetSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [parsers.JSONParser, parsers.FormParser, parsers.MultiPartParser]
+
+    def get_queryset(self):
+        return Pet.objects.filter(activo=True, responsable=self.request.user)
+    
+# SOLICITUDES DE ADOPCION    
+    
 ALLOWED_CONTENT_TYPES = {
     "application/pdf", "image/jpeg", "image/png", "image/webp",
 }
@@ -166,41 +192,46 @@ class UploadFormularioView(APIView):
         req.save()
 
         return Response({"ok": True,}, status=status.HTTP_201_CREATED)
+    
+class SmallPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
 
 class ListarSolicitudesAdopcionView(generics.ListAPIView):
-    serializer_class = AdoptionRequestSerializer
+    pagination_class = SmallPagination
+    serializer_class = AdoptionRequestListSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
-        queryset = AdoptionRequest.objects.filter(mascota__responsable=user).order_by('-fecha_solicitud')
-        mascota_id = self.request.query_params.get('mascota')
+        qs = (
+            AdoptionRequest.objects
+            .select_related("mascota", "adoptante")
+            .filter(mascota__responsable=user)
+            .order_by("-fecha_solicitud")
+        )
 
-        if mascota_id:
-            queryset = queryset.filter(mascota_id=mascota_id)
-            
-        return queryset
-    
-class MostrarMascotaView(generics.RetrieveAPIView):
-    queryset = Pet.objects.all()
-    serializer_class = PetSerializer
-    permission_classes = [permissions.AllowAny]
+        pet_id = self.request.query_params.get("pet_id")
+        if pet_id:
+            qs = qs.filter(mascota_id=pet_id)
 
-    
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(
+                Q(nombre__icontains=search) |
+                Q(email__icontains=search) |
+                Q(telefono__icontains=search)
+            )
+        return qs
 
-class EliminarMascotaView(generics.DestroyAPIView):
-    queryset = Pet.objects.all()
-    serializer_class = PetSerializer
+class RecuperarSolicitudAdopcionView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
-
-    def perform_destroy(self, instance):
-        instance.activo = False
-        instance.save()
-
-class ActualizarMascotaView(generics.RetrieveUpdateAPIView):
-    serializer_class = UpdatePetSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [parsers.JSONParser, parsers.FormParser, parsers.MultiPartParser]
+    serializer_class = AdoptionRequestListSerializer
 
     def get_queryset(self):
-        return Pet.objects.filter(activo=True, responsable=self.request.user)
+        user = self.request.user
+        return (
+            AdoptionRequest.objects
+            .select_related("mascota", "adoptante")
+            .filter(Q(mascota__responsable=user) | Q(adoptante=user))
+        )
