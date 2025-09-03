@@ -5,10 +5,14 @@ from .models import Pet, Coment, AdoptionRequest
 User = get_user_model()
 
 class PetSerializer(serializers.ModelSerializer):
+    ciudad = serializers.SerializerMethodField()
     class Meta:
         model = Pet
         fields = '__all__'
         read_only_fields = ['responsable']
+
+    def get_ciudad(self, obj):
+        return obj.ciudad
 
 class UpdatePetSerializer(serializers.ModelSerializer):
     class Meta:

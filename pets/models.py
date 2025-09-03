@@ -24,6 +24,10 @@ class Pet(models.Model):
     def __str__(self):
         return self.nombre
     
+    @property
+    def ciudad(self):
+        return self.responsable.ciudad
+    
 class Coment(models.Model):
     autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     mascota = models.ForeignKey('Pet', on_delete=models.CASCADE, related_name='comentarios')
