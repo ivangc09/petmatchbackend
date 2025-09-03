@@ -2,11 +2,12 @@ from .models import Pet, Coment, AdoptionRequest
 from .serializers import PetSerializer, ComentSerializer, AdoptionRequestListSerializer, UpdatePetSerializer
 
 from django.conf import settings
-from rest_framework import generics, permissions, status, parsers
+from rest_framework import generics, permissions, status, parsers, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.pagination import PageNumberPagination
+from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 
 import json
@@ -23,21 +24,22 @@ class CrearMascotaView(generics.CreateAPIView):
 class ListarMascotasView(generics.ListAPIView):
     serializer_class = PetSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["especie", "tamaño", "sexo", "estado"]
+    search_fields = ["nombre", "raza"]
+    ordering_fields = ["id", "nombre", "edad", "raza", "estado", "especie", "tamaño"]
+    ordering = ["-id"]
 
     def get_queryset(self):
         return Pet.objects.filter(responsable=self.request.user, activo=True)
     
 class ListarTodasMascotasView(generics.ListAPIView):
+    queryset = Pet.objects.filter(activo=True).order_by("-id")
     serializer_class = PetSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-
-        if user.tipo_usuario == 'adoptante':
-            return Pet.objects.filter(estado='disponible')
-        
-        return Pet.objects.none()
+    permission_classes = [permissions.IsAuthenticated] 
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ["especie", "tamaño", "sexo", "estado"]
+    search_fields = ["nombre", "raza"]
     
 class CrearComentarioView(generics.CreateAPIView):
     serializer_class = ComentSerializer
