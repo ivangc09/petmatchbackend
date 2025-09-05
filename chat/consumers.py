@@ -77,5 +77,4 @@ class DMConsumer(AsyncJsonWebsocketConsumer):
         )
 
     async def chat_message(self, event):
-        # Formato que consume el front: { type: "message", message: {...} }
-        await self.send_json({"type": "message", "message": event["message"]})
+        await self.send_json(event["message"])  
