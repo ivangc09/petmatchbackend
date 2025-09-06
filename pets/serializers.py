@@ -9,6 +9,16 @@ class PetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pet
         fields = '__all__'
+        read_only_fields = ['responsable','activo']
+
+    def get_ciudad(self, obj):
+        return obj.ciudad
+
+class DeletePetSerializer(serializers.ModelSerializer):
+    ciudad = serializers.SerializerMethodField()
+    class Meta:
+        model = Pet
+        fields = '__all__'
         read_only_fields = ['responsable']
 
     def get_ciudad(self, obj):

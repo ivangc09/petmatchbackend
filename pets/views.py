@@ -1,5 +1,5 @@
 from .models import Pet, Coment, AdoptionRequest
-from .serializers import PetSerializer, ComentSerializer, AdoptionRequestListSerializer, UpdatePetSerializer
+from .serializers import PetSerializer, ComentSerializer, AdoptionRequestListSerializer, UpdatePetSerializer,DeletePetSerializer
 
 from django.conf import settings
 from rest_framework import generics, permissions, status, parsers, filters
@@ -31,7 +31,7 @@ class ListarMascotasView(generics.ListAPIView):
     ordering = ["-id"]
 
     def get_queryset(self):
-        return Pet.objects.filter(responsable=self.request.user, activo=True)
+        return Pet.objects.filter(responsable=self.request.user,activo=True)
     
 class ListarTodasMascotasView(generics.ListAPIView):
     queryset = Pet.objects.filter(activo=True).order_by("-id")
@@ -59,7 +59,7 @@ class ListarComentariosView(generics.ListAPIView):
     
 class MostrarMascotaView(generics.RetrieveAPIView):
     queryset = Pet.objects.all()
-    serializer_class = PetSerializer
+    serializer_class = DeletePetSerializer
     permission_classes = [permissions.AllowAny]
 
 class EliminarMascotaView(generics.DestroyAPIView):
