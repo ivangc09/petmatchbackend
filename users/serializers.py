@@ -13,11 +13,15 @@ class CustomRegisterSerializer(RegisterSerializer):
     def get_cleaned_data(self):
         data = super().get_cleaned_data()
         data['tipo_usuario'] = self.validated_data.get('tipo_usuario', 'adoptante')
+        data['ciudad'] = self.validated_data.get('ciudad', '')
+        data['telefono'] = self.validated_data.get('telefono', '')
         return data
 
     def save(self, request):
         user = super().save(request)
         user.tipo_usuario = self.validated_data.get('tipo_usuario', 'adoptante')
+        user.ciudad = self.validated_data.get('ciudad', '')
+        user.telefono = self.validated_data.get('telefono', '')
         user.save()
 
         return user

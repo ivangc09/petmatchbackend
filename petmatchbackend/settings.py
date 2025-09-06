@@ -174,7 +174,7 @@ SITE_ID = 1
 
 ACCOUNT_LOGIN_METHODS = {'username'}
 
-ACCOUNT_SIGNUP_FIELDS = ['username*', 'email*', 'password1*', 'password2*','tipo_usuario*']
+ACCOUNT_SIGNUP_FIELDS = ['username*', 'email*', 'password1*', 'password2*','ciudad*','telefono*','tipo_usuario*']
 
 
 SOCIALACCOUNT_PROVIDERS = {
