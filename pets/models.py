@@ -41,6 +41,7 @@ class AdoptionRequest(models.Model):
     mascota = models.ForeignKey(Pet, on_delete=models.CASCADE)
     adoptante = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='solicitudes')
     fecha_solicitud = models.DateTimeField(auto_now_add=True)
+    estado = models.CharField(max_length=20, choices=[('pendiente', 'Pendiente'), ('aprobada', 'Aprobada'), ('rechazada', 'Rechazada')], default='pendiente')
 
     # DATOS DEL FORMULARIO DE ADOPCION
 

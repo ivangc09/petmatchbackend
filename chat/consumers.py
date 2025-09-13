@@ -77,4 +77,26 @@ class DMConsumer(AsyncJsonWebsocketConsumer):
         )
 
     async def chat_message(self, event):
-        await self.send_json(event["message"])  
+        await self.send_json(event["message"])
+
+# NOTIFICACIONES
+
+class NotificationConsumer(AsyncJsonWebsocketConsumer):
+    async def connect(self):
+        user = self.scope.get("user")
+        print(f"[WS NOTIF CONNECT] user_id={getattr(user, 'id', None)} anon={user.is_anonymous}")
+        if not user or user.is_anonymous:
+            # Close with explicit unauthorized code
+            await self.close(code=4401)
+            return
+
+        self.group_name = f"user.{user.id}"
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        print(f"[WS NOTIF JOIN] {self.group_name} -> {self.channel_name}")
+        await self.accept()
+
+    async def notify(self, event):
+        await self.send_json({
+            "type": event.get("event", "notification"),
+            "payload": event.get("payload", {}),
+        })

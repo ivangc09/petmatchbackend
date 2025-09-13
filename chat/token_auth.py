@@ -6,15 +6,14 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 class TokenAuthMiddleware(BaseMiddleware):
     """
-    Lee ?token=<JWT> del query string y autentica al user.
-    Si no hay token, deja el user que ya venía (por si usas cookies).
+    Autentica al usuario leyendo ?token=<JWT> en el query string.
+    Soporta tokens con prefijo 'Bearer ' o 'Token '.
     """
     def __init__(self, inner):
         super().__init__(inner)
         self.jwt_auth = JWTAuthentication()
 
     async def __call__(self, scope, receive, send):
-        # Mantén el usuario que dejó AuthMiddlewareStack (si lo hay)
         user = scope.get("user", AnonymousUser())
 
         # Extrae ?token=...
@@ -22,7 +21,13 @@ class TokenAuthMiddleware(BaseMiddleware):
         token = parse_qs(query_string).get("token", [None])[0]
 
         if token:
-            user = await self._get_user_from_token(token)
+            # tolera 'Bearer xxx' o 'Token xxx'
+            parts = str(token).split()
+            raw_token = parts[-1] if len(parts) > 1 else token
+            user = await self._get_user_from_token(raw_token)
+            # logs mínimos de diagnóstico:
+            uid = getattr(user, "id", None)
+            print(f"[WS MIDDLEWARE] token_len={len(raw_token) if raw_token else 0} user_id={uid}")
 
         scope["user"] = user
         return await super().__call__(scope, receive, send)
@@ -31,6 +36,7 @@ class TokenAuthMiddleware(BaseMiddleware):
     def _get_user_from_token(self, raw_token):
         try:
             validated = self.jwt_auth.get_validated_token(raw_token)
-            return self.jwt_auth.get_user(validated)
-        except Exception:
+            return self.jwt_auth.get_user(validated)  # usa claim user_id de SimpleJWT
+        except Exception as e:
+            print("[WS MIDDLEWARE] invalid token:", e)
             return AnonymousUser()
