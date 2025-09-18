@@ -3,13 +3,14 @@ from .serializers import (PetSerializer, ComentSerializer, AdoptionRequestListSe
                         UpdatePetSerializer,DeletePetSerializer)
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from rest_framework import generics, permissions, status, parsers, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Q
+from django.db.models import Q,F
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 
@@ -18,6 +19,8 @@ import boto3, uuid
 from botocore.exceptions import BotoCoreError, ClientError
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+
+User = get_user_model()
 
 #
 # PAGINACION
@@ -248,22 +251,44 @@ class RecuperarSolicitudAdopcionView(generics.RetrieveAPIView):
         )
 
 class AceptarSolicitudView(APIView):
-    permissions_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     @transaction.atomic
     def post(self, request, pk):
-        solicitud = get_object_or_404(AdoptionRequest.objects.select_related("mascota","adoptante"), pk=pk)
+        solicitud = (
+            AdoptionRequest.objects
+            .select_related("mascota", "adoptante")
+            .select_for_update()
+            .filter(pk=pk)
+            .first()
+        )
 
         mascota = solicitud.mascota
 
         if mascota.responsable != request.user:
             return Response({"error": "No autorizado"}, status=status.HTTP_403_FORBIDDEN)
         
+        if solicitud.estado != "pendiente":
+            return Response({"error": "La solicitud no está pendiente"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if mascota.estado == "adoptado":
+            return Response({"error": "La mascota ya fue adoptada"}, status=status.HTTP_409_CONFLICT)
+        
         mascota.estado = "adoptado"
         mascota.save(update_fields=["estado"])
 
         solicitud.estado = "aprobada"
         solicitud.save(update_fields=["estado"])
+
+        (AdoptionRequest.objects
+            .filter(mascota_id=mascota.id, estado="pendiente")
+            .exclude(pk=solicitud.pk)
+            .update(estado="rechazada"))
+        
+        User.objects.filter(pk=solicitud.adoptante_id).update(
+            mascotas_adoptadas=F("mascotas_adoptadas") + 1
+        )
+
 
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
@@ -342,7 +367,18 @@ class RechazarSolicitudView(APIView):
             },
             status=status.HTTP_200_OK,
         )
-    
+
+class ContarMascotasView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self,request):
+        u = request.user
+
+        total_registradas = Pet.objects.filter(responsable=u,activo=True).count()
+
+        return Response({
+            "total_registradas": total_registradas
+        })
 
 #class RecomendarMascotaView(APIView):
 #    permission_classes = [permissions.IsAuthenticated]

@@ -12,6 +12,6 @@ class CustomUser(AbstractUser):
     ciudad = models.CharField(max_length=100, blank=True, null=True)
     foto_perfil = models.ImageField(storage=NoHeadObjectS3Boto3Storage(),upload_to='fotos-perfil/', blank=True, null=True)
     telefono = models.CharField(max_length=15, blank=True, null=True)
-    mascotas_adoptadas = models.IntegerField(default=0, blank=True, null=True)
-    mascotas_publicadas = models.IntegerField(default=0, blank=True, null=True)
+    mascotas_adoptadas = models.PositiveIntegerField(default=0)
+    mascotas_publicadas = models.PositiveIntegerField(default=0)
     

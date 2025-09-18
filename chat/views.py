@@ -38,7 +38,7 @@ class ConversationsView(APIView):
         peer_ids = [row['peer_id'] for row in last_by_peer]
         peers = {u.id: u for u in User.objects.filter(id__in=peer_ids)}
 
-        # no leídos (si tienes read_at)
+        # no leídos
         unread_counts = (
             Message.objects.filter(receiver=me, read_at__isnull=True, sender_id__in=peer_ids)
             .values('sender_id')
