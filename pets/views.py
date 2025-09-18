@@ -19,6 +19,13 @@ from botocore.exceptions import BotoCoreError, ClientError
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
+#
+# PAGINACION
+#
+class SmallPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+
 class CrearMascotaView(generics.CreateAPIView):
     serializer_class = PetSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -41,6 +48,7 @@ class ListarMascotasView(generics.ListAPIView):
 class ListarTodasMascotasView(generics.ListAPIView):
     queryset = Pet.objects.filter(activo=True,estado__in=["disponible", "urgente"]).order_by("-id")
     serializer_class = PetSerializer
+    pagination_class = SmallPagination
     permission_classes = [permissions.IsAuthenticated] 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ["especie", "tamaño", "sexo", "estado"]
@@ -199,10 +207,6 @@ class UploadFormularioView(APIView):
         req.save()
 
         return Response({"ok": True,}, status=status.HTTP_201_CREATED)
-    
-class SmallPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = "page_size"
 
 class ListarSolicitudesAdopcionView(generics.ListAPIView):
     pagination_class = SmallPagination
@@ -338,5 +342,55 @@ class RechazarSolicitudView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+    
+
+#class RecomendarMascotaView(APIView):
+#    permission_classes = [permissions.IsAuthenticated]
+#
+#    def post(self, request):
+#        preferencias = request.data.get("preferencias", {})
+#        mascotas = list(Pet.objects.all().values())
+#
+#        if not mascotas:
+#            return Response(
+#                {"mensaje": "No hay mascotas registradas"},
+#                status=status.HTTP_404_NOT_FOUND,
+#            )
+#
+#        prompt = f"""
+#            El usuario busca una mascota con estas preferencias:
+#            {preferencias}
+#            
+#            Estas son las mascotas disponibles:
+#            {mascotas}
+#            
+#            Recomienda las 3 mejores opciones y explica brevemente por qué.
+#            """
+#
+#        try:
+#            openai.api_key = os.getenv("OPENAI_API_KEY")
+#            respuesta = openai.ChatCompletion.create(
+#                model="gpt-4o-mini",
+#                messages=[{"role": "user", "content": prompt}],
+#            )
+#
+#            return Response(
+#                {"recomendaciones": respuesta.choices[0].message["content"]}
+#            )
+#
+#        except Exception as e:
+#            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#class GuardarEncuestaView(APIView):
+#    permission_classes = [permissions.IsAuthenticated]
+#
+#    def post(self, request):
+#        datos = request.data
+#        # Ejemplo: guardar encuesta en tu modelo
+#        # Encuesta.objects.create(usuario=request.user, **datos)
+#
+#        return Response(
+#            {"mensaje": "Encuesta guardada correctamente"}, status=status.HTTP_200_OK
+#        )
 
 

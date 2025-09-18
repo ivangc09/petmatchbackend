@@ -21,6 +21,17 @@ class Pet(models.Model):
 
     activo = models.BooleanField(default=True)
 
+    es_jugueton = models.BooleanField(default=False)
+    es_tranquilo = models.BooleanField(default=False)
+    convive_otras_mascotas = models.BooleanField(default=True)
+    convive_ninos = models.BooleanField(default=True)
+    nivel_energia = models.CharField(
+        max_length=20,
+        choices=[("bajo", "Bajo"), ("medio", "Medio"), ("alto", "Alto")],
+        default="medio"
+    )
+    recomendado = models.BooleanField(default=False)
+
     def __str__(self):
         return self.nombre
     
