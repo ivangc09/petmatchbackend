@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.conf import settings
 from django.urls import path, include
 from django.conf.urls.static import static
-from rest_framework.response import Response
+from django.http import JsonResponse
 
 def _ping(request):
     return Response({"ok": "true"}, status=200)
