@@ -18,6 +18,9 @@ class CustomLoginView(APIView):
         username = request.data.get('username')
         password = request.data.get('password')
 
+        if not username or not password:
+            return Response({'error': 'username y password requeridos'}, status=status.HTTP_400_BAD_REQUEST)
+
         user = authenticate(username=username, password=password)
 
         if user is not None:
@@ -26,10 +29,12 @@ class CustomLoginView(APIView):
                 'refresh_token': str(refresh),
                 'access_token': str(refresh.access_token),
                 'user': {
-                    'email': user.email,
-                    'tipo_usuario': user.tipo_usuario
+                    'email': getattr(user, "email", None),
+                    'tipo_usuario': getattr(user, "tipo_usuario", None),
+                    'username': getattr(user, "username", None),
+                    'id': user.id,
                 }
-            })
+            }, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
         
