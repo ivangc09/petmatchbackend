@@ -5,7 +5,7 @@ from django.conf.urls.static import static
 from django.http import JsonResponse
 
 def _ping(request):
-    return Response({"ok": "true"}, status=200)
+    return JsonResponse({"ok": "true"}, status=200)
 
 
 urlpatterns = [
