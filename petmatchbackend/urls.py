@@ -2,10 +2,10 @@ from django.contrib import admin
 from django.conf import settings
 from django.urls import path, include
 from django.conf.urls.static import static
-import JsonResponse
+from rest_framework.response import Response
 
 def _ping(request):
-    return JsonResponse({"ok": "true"}, status=200)
+    return Response({"ok": "true"}, status=200)
 
 
 urlpatterns = [
