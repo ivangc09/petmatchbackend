@@ -1,8 +1,10 @@
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+import logging
 
 User  = get_user_model()
+log = logging.getLogger(__name__)
 
 class CustomRegisterSerializer(RegisterSerializer):
     tipo_usuario = serializers.ChoiceField(
@@ -12,7 +14,8 @@ class CustomRegisterSerializer(RegisterSerializer):
     )
 
     def custom_signup(self, request, user):
-        # Aquí ya puedes asumir que validated_data tiene los campos declarados arriba
+        log.warning(">>>>> CUSTOM_SIGNUP LLAMADO")
+        print(">>>>> CUSTOM_SIGNUP LLAMADO")
         user.tipo_usuario = self.validated_data.get('tipo_usuario', 'adoptante')
         user.ciudad = self.validated_data.get('ciudad', '')
         user.telefono = self.validated_data.get('telefono', '')
