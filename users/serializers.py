@@ -24,6 +24,7 @@ class CustomRegisterSerializer(RegisterSerializer):
         required=False,
         default='adoptante'
     )
+    ###
 
     def validate(self, attrs):
         log.warning(f">>>>> VALIDATE attrs={attrs}")
