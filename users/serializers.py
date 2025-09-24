@@ -13,13 +13,28 @@ class CustomRegisterSerializer(RegisterSerializer):
         default='adoptante'
     )
 
+    def save(self, request):
+        user = super().save(request)
+        tu  = self.validated_data.get('tipo_usuario', 'adoptante')
+        cd  = self.validated_data.get('ciudad', '')
+        tel = self.validated_data.get('telefono', '')
+
+        log.warning(f">>>>> SAVE LLAMADO ({user.pk=}) {tu=} {cd=} {tel=}")
+        user.tipo_usuario = tu
+        user.ciudad = cd
+        user.telefono = tel
+        user.save()
+        return user
+
     def custom_signup(self, request, user):
-        log.warning(">>>>> CUSTOM_SIGNUP LLAMADO")
-        print(">>>>> CUSTOM_SIGNUP LLAMADO")
-        user.tipo_usuario = self.validated_data.get('tipo_usuario', 'adoptante')
-        user.ciudad = self.validated_data.get('ciudad', '')
-        user.telefono = self.validated_data.get('telefono', '')
-        user.save(update_fields=['tipo_usuario', 'ciudad', 'telefono'])
+        tu  = self.validated_data.get('tipo_usuario', 'adoptante')
+        cd  = self.validated_data.get('ciudad', '')
+        tel = self.validated_data.get('telefono', '')
+        log.warning(f">>>>> CUSTOM_SIGNUP LLAMADO ({user.pk=}) {tu=} {cd=} {tel=}")
+        user.tipo_usuario = tu
+        user.ciudad = cd
+        user.telefono = tel
+        user.save()
         return user
     
 class ProfileSerializer(serializers.ModelSerializer):
