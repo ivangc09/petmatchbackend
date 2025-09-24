@@ -5,25 +5,18 @@ from django.contrib.auth import get_user_model
 User  = get_user_model()
 
 class CustomRegisterSerializer(RegisterSerializer):
-    tipo_usuario = serializers.ChoiceField(choices=[
-        ('adoptante', 'Adoptante'),
-        ('veterinario', 'Veterinario/Albergue')
-    ])
+    tipo_usuario = serializers.ChoiceField(
+        choices=[('adoptante', 'Adoptante'),('veterinario', 'Veterinario/Albergue')],
+        required=False,
+        default='adoptante'
+    )
 
-    def get_cleaned_data(self):
-        data = super().get_cleaned_data()
-        data['tipo_usuario'] = self.validated_data.get('tipo_usuario', 'adoptante')
-        data['ciudad'] = self.validated_data.get('ciudad', '')
-        data['telefono'] = self.validated_data.get('telefono', '')
-        return data
-
-    def save(self, request):
-        user = super().save(request)
+    def custom_signup(self, request, user):
+        # Aquí ya puedes asumir que validated_data tiene los campos declarados arriba
         user.tipo_usuario = self.validated_data.get('tipo_usuario', 'adoptante')
         user.ciudad = self.validated_data.get('ciudad', '')
         user.telefono = self.validated_data.get('telefono', '')
-        user.save()
-
+        user.save(update_fields=['tipo_usuario', 'ciudad', 'telefono'])
         return user
     
 class ProfileSerializer(serializers.ModelSerializer):
