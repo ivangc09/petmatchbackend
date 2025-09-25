@@ -250,6 +250,21 @@ class RecuperarSolicitudAdopcionView(generics.RetrieveAPIView):
             .filter(Q(mascota__responsable=user) | Q(adoptante=user))
         )
 
+
+def send_notification(user_id: int, payload: dict, event: str = "notification"):
+    group = f"user_{user_id}"
+    layer = get_channel_layer()
+
+    def _send():
+        if not layer:
+            return
+        async_to_sync(layer.group_send)(
+            group,
+            {"type": "notify", "event": event, "payload": payload},
+        )
+
+    transaction.on_commit(_send)
+
 class AceptarSolicitudView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -262,6 +277,8 @@ class AceptarSolicitudView(APIView):
             .filter(pk=pk)
             .first()
         )
+        if not solicitud:
+            return Response({"error": "No encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
         mascota = solicitud.mascota
 
@@ -289,20 +306,15 @@ class AceptarSolicitudView(APIView):
             mascotas_adoptadas=F("mascotas_adoptadas") + 1
         )
 
-
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f"user.{solicitud.adoptante_id}",
+        send_notification(
+            solicitud.adoptante_id,
             {
-                "type": "notify",
-                "event": "adoption.accepted",
-                "payload": {
-                    "solicitud_id": solicitud.id,
-                    "mascota_id": mascota.id,
-                    "mascota_nombre": getattr(mascota, "nombre", str(mascota.id)),
-                    "mensaje": f"¡Tu solicitud fue aceptada! {getattr(mascota, 'nombre','Mascota')}",
-                },
+                "solicitud_id": solicitud.id,
+                "mascota_id": mascota.id,
+                "mascota_nombre": getattr(mascota, "nombre", str(mascota.id)),
+                "mensaje": f"¡Tu solicitud fue aceptada! {getattr(mascota, 'nombre','Mascota')}",
             },
+            event="adoption.accepted",
         )
 
         return Response({
@@ -318,50 +330,39 @@ class RechazarSolicitudView(APIView):
 
     @transaction.atomic
     def post(self,request,pk):
-        solicitud = get_object_or_404(AdoptionRequest.objects.select_related("mascota","adoptante"), pk=pk)
+        solicitud = get_object_or_404(
+            AdoptionRequest.objects.select_related("mascota","adoptante"), pk=pk
+        )
 
         mascota = solicitud.mascota
 
         if mascota.responsable != request.user:
             return Response({"error": "No autorizado"}, status=status.HTTP_403_FORBIDDEN)
 
-        
-        # Evitamos rechazar solicitudes que no esten pendientes
         if getattr(solicitud, "estado", "pendiente") != "pendiente":
             return Response(
                 {"detail": f"No se puede rechazar: estado actual = {solicitud.estado}"},
                 status=status.HTTP_409_CONFLICT,
             )
         
-        # Marcamos como rechazada
-        if hasattr(solicitud,"estado"):
-            solicitud.estado = "rechazada"
-            solicitud.save(update_fields=["estado"])
+        solicitud.estado = "rechazada"
+        solicitud.save(update_fields=["estado"])
 
-
-        channel_layer = get_channel_layer()
-        
-        def _notify():
-            async_to_sync(channel_layer.group_send)(
-                f"user.{solicitud.adoptante_id}",
-                {
-                    "type": "notify",
-                    "event": "adoption.rejected",
-                    "payload": {
-                        "solicitud_id": solicitud.id,
-                        "mascota_id": mascota.id,
-                        "mascota_nombre": getattr(mascota, "nombre", str(mascota.id)),
-                        "mensaje": f"¡Tu solicitud fue rechazada! {getattr(mascota, 'nombre','Mascota')}",
-                    },
-                },
-            )
-
-        transaction.on_commit(_notify)
+        send_notification(
+            solicitud.adoptante_id,
+            {
+                "solicitud_id": solicitud.id,
+                "mascota_id": mascota.id,
+                "mascota_nombre": getattr(mascota, "nombre", str(mascota.id)),
+                "mensaje": f"¡Tu solicitud fue rechazada! {getattr(mascota, 'nombre','Mascota')}",
+            },
+            event="adoption.rejected",
+        )
 
         return Response(
             {
                 "id": solicitud.id,
-                "estado": getattr(solicitud, "estado", "rechazada"),
+                "estado": solicitud.estado,
                 "mascota_id": mascota.id,
                 "mascota_nombre": mascota.nombre,
             },
