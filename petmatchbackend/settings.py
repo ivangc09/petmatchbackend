@@ -101,13 +101,20 @@ REDIS_URL = os.getenv('REDIS_URL','redis://localhost:6379/0')
 def ensure_tls(url: str) -> str:
     parsed = urlparse(url)
     scheme = parsed.scheme
-    query = parsed.query
+    query = parsed.query or ""
 
-    if scheme == "redis" and os.environ.get("REDIS_TLS", "false").lower() in ("1","true","yes"):
-        scheme = "rediss"
+    tls_flag = os.environ.get("REDIS_TLS", "false").lower() in ("1","true","yes")
 
-    if scheme == "rediss" and "ssl_cert_reqs" not in (query or ""):
-        query = (query + "&" if query else "") + "ssl_cert_reqs=none"
+    if tls_flag:
+        if scheme == "redis":
+            scheme = "rediss"
+        if "ssl_cert_reqs" not in query:
+            query = (query + "&" if query else "") + "ssl_cert_reqs=none"
+    else:
+        if scheme == "rediss":
+            scheme = "redis"
+        parts = [p for p in query.split("&") if not p.startswith("ssl_cert_reqs")]
+        query = "&".join([p for p in parts if p])
 
     return urlunparse(ParseResult(scheme, parsed.netloc, parsed.path, parsed.params, query, parsed.fragment))
 
@@ -116,9 +123,13 @@ SAFE_REDIS_URL = ensure_tls(REDIS_URL)
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {"hosts": [SAFE_REDIS_URL]},
+        "CONFIG": {
+            "hosts": [SAFE_REDIS_URL],
+            "connection_kwargs": {"ssl": False},
+        },
     },
 }
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
