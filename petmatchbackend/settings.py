@@ -125,7 +125,6 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
             "hosts": [SAFE_REDIS_URL],
-            "connection_kwargs": {"ssl": False},
         },
     },
 }
