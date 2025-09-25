@@ -90,7 +90,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             await self.close(code=4401)
             return
 
-        self.group_name = f"user.{user.id}"
+        self.group_name = f"user_{user.id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         print(f"[WS NOTIF JOIN] {self.group_name} -> {self.channel_name}")
         await self.accept()
