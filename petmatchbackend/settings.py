@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from datetime import timedelta
 import dj_database_url
+from urllib.parse import urlparse, urlunparse, ParseResult
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -95,40 +96,39 @@ TEMPLATES = [
 WSGI_APPLICATION = 'petmatchbackend.wsgi.application'
 ASGI_APPLICATION = 'petmatchbackend.asgi.application'
 
-REDIS_URL = os.getenv('REDIS_URL')
+REDIS_URL = os.getenv('REDIS_URL','redis://localhost:6379/0')
 
-if REDIS_URL:
-    if REDIS_URL.startswith("rediss://"):
-        CHANNEL_LAYERS = {
-            "default": {
-                "BACKEND": "channels_redis.core.RedisChannelLayer",
-                "CONFIG": {
-                    "hosts": [{"address": REDIS_URL, "ssl": True}],
-                    "capacity": 1500,  
-                    "expiry": 60 * 60,
-                },
-            }
-        }
-    else:
-        CHANNEL_LAYERS = {
-            "default": {
-                "BACKEND": "channels_redis.core.RedisChannelLayer",
-                "CONFIG": {
-                    "hosts": [REDIS_URL],
-                    "capacity": 1500,
-                    "expiry": 60 * 60,
-                },
-            }
-        }
-else:
-    # Fallback para desarrollo sin Redis
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels.layers.InMemoryChannelLayer",
-        }
-    }
+def ensure_tls(url: str) -> str:
+    parsed = urlparse(url)
+    scheme = parsed.scheme
+    query = parsed.query
 
+    if scheme == "redis" and os.environ.get("REDIS_TLS", "false").lower() in ("1","true","yes"):
+        scheme = "rediss"
 
+    if scheme == "rediss" and "ssl_cert_reqs" not in (query or ""):
+        query = (query + "&" if query else "") + "ssl_cert_reqs=none"
+
+    return urlunparse(ParseResult(scheme, parsed.netloc, parsed.path, parsed.params, query, parsed.fragment))
+
+SAFE_REDIS_URL = ensure_tls(REDIS_URL)
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [SAFE_REDIS_URL]},
+    },
+}
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "loggers": {
+        "channels": {"handlers": ["console"], "level": "DEBUG"},
+        "channels_redis": {"handlers": ["console"], "level": "DEBUG"},
+        "django": {"handlers": ["console"], "level": "INFO"},
+    },
+}
 
 # *                                    *   
 # *           BASES DE DATOS           * 
