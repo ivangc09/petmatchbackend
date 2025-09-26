@@ -1,83 +1,98 @@
 import os
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
-from asgiref.sync import sync_to_async
+from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
 from .models import Message, make_room
 
+User = get_user_model()
 
 class DMConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
         user = self.scope.get("user")
-        if not user or user.is_anonymous:
-            await self.close()
+        if not user or not user.is_authenticated:
+            await self.close(code=4401)
             return
 
+        # peer_id desde la URL: ws/chat/u/<peer_id>/
         try:
-            self.peer_id = int(self.scope['url_route']['kwargs']['peer_id'])
+            self.peer_id = int(self.scope["url_route"]["kwargs"]["peer_id"])
         except Exception:
-            await self.close()
+            await self.close(code=4400)  # bad request
             return
 
-        # Sala compartida (IDs ordenados)
-        self.room_name = make_room(user.id, self.peer_id)
+        # Evita chat contigo mismo
+        if self.peer_id == user.id:
+            await self.close(code=4403)
+            return
 
-        # Logs
-        print(f"[WS CONNECT] pid={os.getpid()} user={user.id} peer={self.peer_id} room={self.room_name}")
+        # Room canónica (ordenada por ids)
+        self.room = make_room(user.id, self.peer_id)
 
-        await self.channel_layer.group_add(self.room_name, self.channel_name)
+        # Únete al grupo de la room
+        await self.channel_layer.group_add(self.room, self.channel_name)
         await self.accept()
 
+        # (Opcional) notificación de presencia
+        await self.send_json({"type": "presence", "payload": {"joined": True, "room": self.room}})
+
     async def disconnect(self, code):
-        if hasattr(self, "room_name"):
-            await self.channel_layer.group_discard(self.room_name, self.channel_name)
+        if hasattr(self, "room"):
+            await self.channel_layer.group_discard(self.room, self.channel_name)
 
     async def receive_json(self, content, **kwargs):
-        # Esperamos { type: "message", text: "...", client_id?: "..." }
-        if content.get("type") != "message":
-            return
+        """
+        Espera algo como: { action: "send", text: "hola" }
+        """
+        user = self.scope["user"]
+        action = (content or {}).get("action")
 
-        text = (content.get("text") or "").strip()
-        if not text:
-            return
+        if action == "send":
+            text = (content.get("text") or "").strip()
+            if not text:
+                await self.send_json({"type": "error", "payload": {"detail": "text requerido"}})
+                return
 
-        client_id = content.get("client_id")  # puede venir None y no pasa nada
+            # Guarda y retransmite
+            msg = await self._create_message(user.id, self.peer_id, text, self.room)
 
-        # Persistir en DB
-        sender = self.scope["user"]
-        try:
-            User = get_user_model()
-            recipient = await sync_to_async(User.objects.get)(id=self.peer_id)
-        except User.DoesNotExist:
-            # Si el peer no existe, no persistimos ni broadcast
-            return
+            payload = {
+                "id": msg["id"],
+                "text": msg["content"],
+                "sender_id": msg["sender_id"],
+                "receiver_id": msg["receiver_id"],
+                "created_at": msg["timestamp"],
+                "room": self.room,
+            }
 
-        msg = await sync_to_async(Message.objects.create)(
-            sender=sender,
-            receiver=recipient,
-            content=text,
-            room_name=self.room_name,
-        )
-
-        # Log envío
-        print(f"[WS MSG] pid={os.getpid()} room={self.room_name} sender={sender.id} -> msg_id={msg.id} client_id={client_id}")
-
-        # Broadcast a TODOS en la sala (emisor + receptor)
-        await self.channel_layer.group_send(
-            self.room_name,
-            {
-                "type": "chat.message",
-                "message": {
-                    "id": msg.id,
-                    "sender_id": msg.sender_id,
-                    "text": msg.content,
-                    "created_at": msg.timestamp.isoformat(),
-                    "client_id": client_id,
-                },
-            },
-        )
+            # Broadcast a todos en la room (tú y tu peer)
+            await self.channel_layer.group_send(
+                self.room,
+                {"type": "chat.message", "payload": payload}
+            )
+        else:
+            await self.send_json({"type": "error", "payload": {"detail": "action inválida"}})
 
     async def chat_message(self, event):
-        await self.send_json(event["message"])
+        await self.send_json({"type": "message", "payload": event["payload"]})
+
+    # ---------- DB helpers ----------
+    @database_sync_to_async
+    def _create_message(self, sender_id: int, receiver_id: int, text: str, room: str):
+        sender = User.objects.get(id=sender_id)
+        receiver = User.objects.get(id=receiver_id)
+        m = Message.objects.create(
+            sender=sender,
+            receiver=receiver,
+            content=text,
+            room_name=room,
+        )
+        return {
+            "id": m.id,
+            "sender_id": m.sender_id,
+            "receiver_id": m.receiver_id,
+            "content": m.content,
+            "timestamp": m.timestamp.isoformat(),
+        }
 
 # NOTIFICACIONES
 
